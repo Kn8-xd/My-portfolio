@@ -1,8 +1,9 @@
-# Use Node.js for the build process
-image: node:20
+# Match the Node.js version required by package.json
+image: node:22
 
 # Define the order of operations
 stages:
+  - build
   - test
   - secret-detection
   - deploy
@@ -20,18 +21,28 @@ sast:
 secret_detection:
   stage: secret-detection
 
-# The deployment job
-pages:
-  stage: deploy
+# Validate the app on branches and merge requests before deployment.
+build:
+  stage: build
   script:
     - npm install
     - npm run build
-    # Vite outputs to 'dist', but GitLab Pages needs 'public'
-    - rm -rf public 
-    - cp -a dist/. public/ 
+    - test -s dist/index.html
   artifacts:
     paths:
-      - public
+      - dist
   rules:
-    # Only deploy when pushing to the main branch
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+# Publish the validated Vite output only from the default branch.
+deploy-pages:
+  stage: deploy
+  dependencies:
+    - build
+  script:
+    - test -s dist/index.html
+  pages:
+    publish: dist
+  rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
