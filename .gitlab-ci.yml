@@ -1,19 +1,48 @@
-# You can override the included template(s) by including variable overrides
-# SAST customization: https://docs.gitlab.com/user/application_security/sast/#available-cicd-variables
-# Secret Detection customization: https://docs.gitlab.com/user/application_security/secret_detection/pipeline/configure/
-# Dependency Scanning customization: https://docs.gitlab.com/user/application_security/dependency_scanning/dependency_scanning_sbom/#customizing-analyzer-behavior
-# Container Scanning customization: https://docs.gitlab.com/user/application_security/container_scanning/#customizing-analyzer-behavior
-# Note that environment variables can be set in several places
-# See https://docs.gitlab.com/ci/variables/#cicd-variable-precedence
+# Match the Node.js version required by package.json
+image: node:22
+
+# Define the order of operations
 stages:
-- test
-- secret-detection
-sast:
-  stage: test
+  - build
+  - test
+  - secret-detection
+  - deploy
+
 include:
-- template: Security/SAST.gitlab-ci.yml
-- template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+
 variables:
   SECRET_DETECTION_ENABLED: 'true'
+
+sast:
+  stage: test
+
 secret_detection:
   stage: secret-detection
+
+# Validate the app on branches and merge requests before deployment.
+build:
+  stage: build
+  script:
+    - npm install
+    - npm run build
+    - test -s dist/index.html
+  artifacts:
+    paths:
+      - dist
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+# Publish the validated Vite output only from the default branch.
+deploy-pages:
+  stage: deploy
+  dependencies:
+    - build
+  script:
+    - test -s dist/index.html
+  pages:
+    publish: dist
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
