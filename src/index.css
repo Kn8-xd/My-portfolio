@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0E0F10;
+  --color-surface: #17181A;
+  --color-border: #232426;
+  --color-text: #EDEDEA;
+  --color-text-muted: #8A8B87;
+  --color-accent: #C1293C;
+  --color-accent-secondary: #2B4A47;
+
+  --font-display: "Fraunces Variable", serif;
+  --font-body: "Inter Variable", sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  /* Ensure smooth scrolling doesn't conflict with custom scroll */
+  overscroll-behavior: none;
+}
